@@ -6,6 +6,8 @@ import { Construct } from "constructs";
 
 export class MetadataStorageStack extends Stack {
 
+    private readonly port: number = 5432
+
     public readonly cluster: DatabaseCluster;
 
     constructor(scope: Construct, id: string, props: MetadataStorageStackProps) {
@@ -15,13 +17,14 @@ export class MetadataStorageStack extends Stack {
         const sg = new SecurityGroup(this, "dify-rds-metadata", {
             vpc: props.vpc, allowAllOutbound: true
         });
-        sg.addIngressRule(Peer.anyIpv4(), Port.tcp(5432))
+        sg.addIngressRule(Peer.anyIpv4(), Port.tcp(this.port))
 
         this.cluster = new DatabaseCluster(this, 'dify-metadata-storage', {
             vpc: props.vpc,
             securityGroups: [sg],
             vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
 
+            port: this.port,
             clusterIdentifier: 'dify-metadata-storage',
             instanceIdentifierBase: 'dify-metadata-storage-',
             engine: DatabaseClusterEngine.auroraPostgres({ version: AuroraPostgresEngineVersion.VER_15_4 }),
@@ -30,6 +33,7 @@ export class MetadataStorageStack extends Stack {
             serverlessV2MinCapacity: 0.5,
             serverlessV2MaxCapacity: 2,
             iamAuthentication: true,
+
             defaultDatabaseName: 'dify',
         })
     }
