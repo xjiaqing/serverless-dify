@@ -15,7 +15,7 @@ export class CeleryBrokerStack extends Stack {
 
         // todo auth
 
-        this.cluster = new elasticache.CfnServerlessCache(this, 'dify-celery-broker', {
+        this.cluster = new elasticache.CfnServerlessCache(this, 'DifyCeleryBroker', {
             engine: 'redis',
             serverlessCacheName: 'serverless-dify-celery-broker',
             description: 'serverless redis cluster using for dify celery broker',

@@ -11,12 +11,12 @@ export class RedisStack extends Stack {
     constructor(scope: Construct, id: string, props: DifyRedisStackProps) {
         super(scope, id, props);
 
-        const sg = new SecurityGroup(this, "dify-redis-sg", { vpc: props.vpc, allowAllOutbound: true });
+        const sg = new SecurityGroup(this, "DifyRedisSecurityGroup", { vpc: props.vpc, allowAllOutbound: true });
         sg.addIngressRule(Peer.ipv4(props.vpc.vpcCidrBlock), Port.tcp(this.port))
 
         //todo elasticache for redis user & password auth
 
-        this.cluster = new elasticache.CfnServerlessCache(this, 'dify-redis', {
+        this.cluster = new elasticache.CfnServerlessCache(this, 'DifyRedis', {
             engine: 'redis',
             serverlessCacheName: 'dify-redis',
             description: 'serverless redis cluster using for dify redis',

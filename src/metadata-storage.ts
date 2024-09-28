@@ -14,7 +14,7 @@ export class MetadataStorageStack extends Stack {
         super(scope, id, props);
 
         // security group for dify metadata postgresql
-        const sg = new SecurityGroup(this, "dify-rds-metadata", {
+        const sg = new SecurityGroup(this, "DifyMetadataSecurityGroup", {
             vpc: props.vpc, allowAllOutbound: true
         });
         sg.addIngressRule(Peer.anyIpv4(), Port.tcp(this.port))
@@ -39,7 +39,7 @@ export class MetadataStorageStack extends Stack {
             serverlessV2MinCapacity: 0.5,
             serverlessV2MaxCapacity: 2,
             iamAuthentication: true,
-
+            enableDataApi: true,
             defaultDatabaseName: 'dify',
         })
 
