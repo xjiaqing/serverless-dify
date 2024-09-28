@@ -1,7 +1,7 @@
-import { Stack, StackProps } from "aws-cdk-lib";
+import { RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
 import { Peer, Port, SecurityGroup, SubnetType, Vpc } from "aws-cdk-lib/aws-ec2";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
-import { AuroraPostgresEngineVersion, ClusterInstance, DatabaseCluster, DatabaseClusterEngine } from "aws-cdk-lib/aws-rds";
+import { AuroraPostgresEngineVersion, ClusterInstance, DatabaseCluster, DatabaseClusterEngine, SubnetGroup } from "aws-cdk-lib/aws-rds";
 import { Construct } from "constructs";
 
 export class MetadataStorageStack extends Stack {
@@ -19,16 +19,22 @@ export class MetadataStorageStack extends Stack {
         });
         sg.addIngressRule(Peer.anyIpv4(), Port.tcp(this.port))
 
-        this.cluster = new DatabaseCluster(this, 'dify-metadata-storage', {
+        // subnet group 
+        const subnetGroup = new SubnetGroup(this, 'DifyMetadataStorageSubnetGroup', {
+            description: 'DifyMetadataStorage',
+            vpc: props.vpc,
+            removalPolicy: RemovalPolicy.DESTROY,
+            vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
+        });
+
+        this.cluster = new DatabaseCluster(this, 'DifyMetadataStorageInstanceCluster', {
             vpc: props.vpc,
             securityGroups: [sg],
-            vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
-
             port: this.port,
-            clusterIdentifier: 'dify-metadata-storage',
-            instanceIdentifierBase: 'dify-metadata-storage-',
+            subnetGroup: subnetGroup,
+            clusterIdentifier: 'DifyMetadataStorage',
             engine: DatabaseClusterEngine.auroraPostgres({ version: AuroraPostgresEngineVersion.VER_15_4 }),
-            writer: ClusterInstance.serverlessV2('dify-metadata-storage'),
+            writer: ClusterInstance.serverlessV2('DifyMetadataStorage'),
             cloudwatchLogsRetention: RetentionDays.ONE_WEEK,
             serverlessV2MinCapacity: 0.5,
             serverlessV2MaxCapacity: 2,
@@ -36,6 +42,8 @@ export class MetadataStorageStack extends Stack {
 
             defaultDatabaseName: 'dify',
         })
+
+        this.cluster.applyRemovalPolicy(RemovalPolicy.DESTROY)
     }
 }
 
