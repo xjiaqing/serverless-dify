@@ -10,14 +10,14 @@ export class CeleryBrokerStack extends Stack {
     constructor(scope: Construct, id: string, props: CeleryBrokerStackProps) {
         super(scope, id, props);
 
-        const sg = new SecurityGroup(this, 'celery-broker-sg', { vpc: props.vpc, allowAllOutbound: true })
+        const sg = new SecurityGroup(this, 'CeleryBrokerSecurityGroup', { vpc: props.vpc, allowAllOutbound: true })
         sg.addIngressRule(Peer.ipv4(props.vpc.vpcCidrBlock), Port.tcp(6379))
 
         // todo auth
 
         this.cluster = new elasticache.CfnServerlessCache(this, 'DifyCeleryBroker', {
             engine: 'redis',
-            serverlessCacheName: 'serverless-dify-celery-broker',
+            serverlessCacheName: 'dify-celery-broker',
             description: 'serverless redis cluster using for dify celery broker',
             securityGroupIds: [sg.securityGroupId],
             subnetIds: props.vpc.privateSubnets.map(subnet => subnet.subnetId)

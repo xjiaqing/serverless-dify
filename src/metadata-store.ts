@@ -4,7 +4,7 @@ import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AuroraPostgresEngineVersion, ClusterInstance, DatabaseCluster, DatabaseClusterEngine, SubnetGroup } from "aws-cdk-lib/aws-rds";
 import { Construct } from "constructs";
 
-export class MetadataStorageStack extends Stack {
+export class MetadataStoreStack extends Stack {
 
     private readonly port: number = 5432
 
