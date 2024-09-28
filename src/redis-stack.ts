@@ -2,7 +2,7 @@ import { Stack, StackProps, aws_elasticache as elasticache } from "aws-cdk-lib";
 import { Peer, Port, SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2";
 import { Construct } from "constructs";
 
-export class DifyRedisStack extends Stack {
+export class RedisStack extends Stack {
 
     private readonly port: number = 6379
 
