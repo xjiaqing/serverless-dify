@@ -11,6 +11,8 @@ export class VectorStoreStack extends Stack {
 
     private readonly port: number = 5432
 
+    private readonly defaultDatabaseName: string = 'dify'
+
     public readonly cluster: DatabaseCluster
 
     constructor(scope: Construct, id: string, props: VectorStoreStackProps) {
@@ -40,7 +42,7 @@ export class VectorStoreStack extends Stack {
             serverlessV2MaxCapacity: 2,
             iamAuthentication: true,
             enableDataApi: true,
-            defaultDatabaseName: 'dify-vector'
+            defaultDatabaseName: this.defaultDatabaseName
         })
 
         this.enablePgvector()
@@ -55,7 +57,7 @@ export class VectorStoreStack extends Stack {
                 parameters: {
                     resourceArn: cluster.clusterArn,
                     secretArn: cluster.secret?.secretArn,
-                    database: 'dify',
+                    database: this.defaultDatabaseName,
                     sql: 'CREATE EXTENSION IF NOT EXISTS vector;'
                 },
                 physicalResourceId: PhysicalResourceId.of(cluster.clusterArn)
