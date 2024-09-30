@@ -11,18 +11,17 @@ export class ServerlessDifyStack extends cdk.Stack {
 	constructor(scope: Construct, id: string, props?: cdk.StackProps) {
 		super(scope, id, props);
 
-		const network = new NetworkStack(this, 'DifyNetwork')
-		const metadataStore = new MetadataStoreStack(this, 'DifyMetadata', { vpc: network.vpc })
-		const redis = new RedisStack(this, 'DifyRedis', { vpc: network.vpc })
-		const celeryBroker = new CeleryBrokerStack(this, 'DifyCeleryBroker', { vpc: network.vpc })
-		const storage = new StorageStack(this, 'DifyStorage')
-		const vectorStore = new VectorStoreStack(this, 'DifyVectorStore', { vpc: network.vpc })
+		const network = new NetworkStack(this, 'NetworkStack')
+		const storage = new StorageStack(this, 'StorageStack')
 
+		const metadataStore = new MetadataStoreStack(this, 'MetadataStack', { vpc: network.vpc })
+		const redis = new RedisStack(this, 'RedisStack', { vpc: network.vpc })
+		const celeryBroker = new CeleryBrokerStack(this, 'CeleryBrokerStack', { vpc: network.vpc })
+		const vectorStore = new VectorStoreStack(this, 'VectorStoreStack', { vpc: network.vpc })
 
-		// add dependency to ensure the order of resource creation
 		metadataStore.addDependency(network)
+		vectorStore.addDependency(network)
 		redis.addDependency(network)
 		celeryBroker.addDependency(network)
-		vectorStore.addDependency(network)
 	}
 }

@@ -1,4 +1,4 @@
-import { RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { NestedStack, RemovalPolicy, StackProps } from "aws-cdk-lib";
 import { Peer, Port, SecurityGroup, SubnetType, Vpc } from "aws-cdk-lib/aws-ec2";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AuroraPostgresEngineVersion, ClusterInstance, DatabaseCluster, DatabaseClusterEngine, SubnetGroup } from "aws-cdk-lib/aws-rds";
@@ -7,7 +7,7 @@ import { Construct } from "constructs";
 
 
 
-export class VectorStoreStack extends Stack {
+export class VectorStoreStack extends NestedStack {
 
     private readonly port: number = 5432
 
@@ -18,10 +18,10 @@ export class VectorStoreStack extends Stack {
     constructor(scope: Construct, id: string, props: VectorStoreStackProps) {
         super(scope, id, props)
 
-        const sg = new SecurityGroup(this, "DifyVectorStoreSecurityGroup", { vpc: props.vpc, allowAllOutbound: true })
+        const sg = new SecurityGroup(scope, "VectorStoreSecurityGroup", { vpc: props.vpc, allowAllOutbound: true })
         sg.addIngressRule(Peer.anyIpv4(), Port.tcp(this.port))
 
-        const subnetGroup = new SubnetGroup(this, 'DifyVectorStoreSubnetGroup', {
+        const subnetGroup = new SubnetGroup(scope, 'VectorStoreSubnetGroup', {
             description: 'DifyVectorStore',
             vpc: props.vpc,
             removalPolicy: RemovalPolicy.DESTROY,
@@ -29,12 +29,12 @@ export class VectorStoreStack extends Stack {
         });
 
 
-        this.cluster = new DatabaseCluster(this, 'DifyVectorStoreInstanceCluster', {
+        this.cluster = new DatabaseCluster(scope, 'VectorStoreInstanceCluster', {
             vpc: props.vpc,
             securityGroups: [sg],
             port: this.port,
             subnetGroup: subnetGroup,
-            clusterIdentifier: 'DifyVectorStore',
+            clusterIdentifier: 'VectorStore',
             engine: DatabaseClusterEngine.auroraPostgres({ version: AuroraPostgresEngineVersion.VER_15_4 }),
             writer: ClusterInstance.serverlessV2('DifyVectorStore'),
             cloudwatchLogsRetention: RetentionDays.ONE_WEEK,
@@ -45,7 +45,11 @@ export class VectorStoreStack extends Stack {
             defaultDatabaseName: this.defaultDatabaseName
         })
 
-        this.enablePgvector()
+        const query = this.enablePgvector()
+        this.cluster.secret?.grantRead(query)
+        this.cluster.grantDataApiAccess(query)
+
+        query.node.addDependency(this.cluster)
     }
 
     private enablePgvector() {
@@ -64,9 +68,6 @@ export class VectorStoreStack extends Stack {
             },
             policy: AwsCustomResourcePolicy.fromSdkCalls({ resources: [cluster.clusterArn] })
         })
-
-        cluster.secret?.grantRead(query)
-        cluster.grantDataApiAccess(query)
 
         return query
     }
