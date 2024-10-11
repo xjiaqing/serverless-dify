@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { CeleryBrokerStack } from '../src/celery-broker-stack';
+import { DifyEcsClusterStack } from '../src/dify-ecs-cluster-stack';
 import { MetadataStoreStack } from '../src/metadata-store';
 import { VpcStack as NetworkStack } from '../src/network-stack';
 import { RedisStack } from '../src/redis-stack';
@@ -19,9 +20,12 @@ export class ServerlessDifyStack extends cdk.Stack {
 		const celeryBroker = new CeleryBrokerStack(this, 'CeleryBrokerStack', { vpc: network.vpc })
 		const vectorStore = new VectorStoreStack(this, 'VectorStoreStack', { vpc: network.vpc })
 
+		const difyEcsCluster = new DifyEcsClusterStack(this, 'EcsClusterStack', { vpc: network.vpc })
+
 		metadataStore.addDependency(network)
 		vectorStore.addDependency(network)
 		redis.addDependency(network)
 		celeryBroker.addDependency(network)
+		difyEcsCluster.addDependency(network)
 	}
 }
