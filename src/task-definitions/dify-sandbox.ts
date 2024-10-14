@@ -1,6 +1,6 @@
 import { NestedStack, RemovalPolicy, StackProps } from "aws-cdk-lib";
 import { AppProtocol, AwsLogDriverMode, Compatibility, ContainerImage, CpuArchitecture, LogDriver, NetworkMode, OperatingSystemFamily, Protocol, TaskDefinition } from "aws-cdk-lib/aws-ecs";
-import { Role } from "aws-cdk-lib/aws-iam";
+import { Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import { Construct } from "constructs";
 
@@ -19,11 +19,17 @@ export class DifySandboxTaskDefinitionStack extends NestedStack {
             logGroupName: '/ecs/serverless-dify/sandbox'
         })
 
+        const taskRole = new Role(this, 'ServerlessDifyClusterSandboxTaskRole', {
+            assumedBy: new ServicePrincipal('ecs-tasks.amazonaws.com'),
+            roleName: 'ServerlessDifyClusterSandboxTaskRole',
+            managedPolicies: [{ managedPolicyArn: 'arn:aws:iam::aws:policy/AdministratorAccess' }]
+        })
+
         this.definition = new TaskDefinition(this, 'DifySandboxTaskDefinitionStack', {
             family: "serverless-dify-sandbox",
-            taskRole: Role.fromRoleArn(this, "ServerlessDifyClusterSandboxTaskRole", "arn:aws:iam::867533378352:role/ECSTaskGeneralRole"),
-            executionRole: Role.fromRoleArn(this, "ServerlessDifyClusterSandboxExecutionRole", "arn:aws:iam::867533378352:role/ECSTaskGeneralRole"),
-            compatibility: Compatibility.EC2_AND_FARGATE,
+            taskRole: taskRole,
+            executionRole: taskRole,
+            compatibility: Compatibility.EC2,
             networkMode: NetworkMode.AWS_VPC,
             runtimePlatform: {
                 operatingSystemFamily: OperatingSystemFamily.LINUX,
