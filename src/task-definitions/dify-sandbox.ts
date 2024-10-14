@@ -21,7 +21,6 @@ export class DifySandboxTaskDefinitionStack extends NestedStack {
 
         const taskRole = new Role(this, 'ServerlessDifyClusterSandboxTaskRole', {
             assumedBy: new ServicePrincipal('ecs-tasks.amazonaws.com'),
-            roleName: 'ServerlessDifyClusterSandboxTaskRole',
             managedPolicies: [{ managedPolicyArn: 'arn:aws:iam::aws:policy/AdministratorAccess' }]
         })
 
@@ -29,7 +28,7 @@ export class DifySandboxTaskDefinitionStack extends NestedStack {
             family: "serverless-dify-sandbox",
             taskRole: taskRole,
             executionRole: taskRole,
-            compatibility: Compatibility.EC2,
+            compatibility: Compatibility.EC2_AND_FARGATE,
             networkMode: NetworkMode.AWS_VPC,
             runtimePlatform: {
                 operatingSystemFamily: OperatingSystemFamily.LINUX,
