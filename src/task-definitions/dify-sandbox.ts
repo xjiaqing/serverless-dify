@@ -32,7 +32,7 @@ export class DifySandboxTaskDefinitionStack extends NestedStack {
             networkMode: NetworkMode.AWS_VPC,
             runtimePlatform: {
                 operatingSystemFamily: OperatingSystemFamily.LINUX,
-                cpuArchitecture: CpuArchitecture.X86_64
+                cpuArchitecture: CpuArchitecture.ARM64
             },
             cpu: '1024',
             memoryMiB: '2048'
@@ -46,7 +46,7 @@ export class DifySandboxTaskDefinitionStack extends NestedStack {
             portMappings: [
                 { containerPort: 8194, hostPort: 8194, name: "serverless-dify-sandbox-8194-tcp", appProtocol: AppProtocol.http, protocol: Protocol.TCP }
             ],
-            cpu: 512,
+            cpu: 1024,
             logging: LogDriver.awsLogs({ streamPrefix: 'sandbox', logGroup: this.logGroup, mode: AwsLogDriverMode.NON_BLOCKING }),
             environment: {
                 'GIN_MODE': 'release',
