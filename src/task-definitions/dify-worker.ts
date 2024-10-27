@@ -12,7 +12,7 @@ export class DifyWorkerTaskDefinitionStack extends NestedStack {
     constructor(scope: Construct, id: string, props: DifyTaskDefinitionStackProps) {
         super(scope, id, props);
 
-        const taskRole = new Role(this, 'ServerlessDifyClusterApiTaskRole', {
+        const taskRole = new Role(this, 'ServerlessDifyClusterWorkerTaskRole', {
             assumedBy: new ServicePrincipal('ecs-tasks.amazonaws.com'),
             managedPolicies: [{ managedPolicyArn: 'arn:aws:iam::aws:policy/AdministratorAccess' }]
         })
