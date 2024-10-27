@@ -6,6 +6,7 @@ import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
 import { MetadataStoreStack } from "./metadata-store";
 import { DifyApiTaskDefinitionStack } from "./task-definitions/dify-api";
+import { DifyWorkerTaskDefinitionStack } from "./task-definitions/dify-worker";
 import { DifyTaskDefinitionStackProps } from "./task-definitions/props";
 import { VectorStoreStack } from "./vector-store";
 
@@ -64,6 +65,7 @@ export class DifyEcsClusterStack extends NestedStack {
         }
 
         this.runApiService(difyTaskDefinitionStackProps)
+        this.runWorkerService(difyTaskDefinitionStackProps)
     }
 
     runApiService(props: DifyTaskDefinitionStackProps) {
@@ -76,6 +78,23 @@ export class DifyEcsClusterStack extends NestedStack {
             taskDefinition: taskDefinition.definition,
             desiredCount: 1,
             serviceName: 'serverless-dify-api',
+            vpcSubnets: this.cluster.vpc.selectSubnets({ subnetType: SubnetType.PRIVATE_WITH_EGRESS }),
+            securityGroups: [this.securityGroup],
+        })
+
+        return service
+    }
+
+    runWorkerService(props: DifyTaskDefinitionStackProps) {
+        const taskDefinition = new DifyWorkerTaskDefinitionStack(this, 'DifyWorkerTaskDefinitionStack', props)
+        taskDefinition.node.addDependency(this.cluster)
+        taskDefinition.node.addDependency(this.securityGroup)
+
+        const service = new FargateService(this, 'ServerlessDifyWorkerService', {
+            cluster: this.cluster,
+            taskDefinition: taskDefinition.definition,
+            desiredCount: 1,
+            serviceName: 'serverless-dify-worker',
             vpcSubnets: this.cluster.vpc.selectSubnets({ subnetType: SubnetType.PRIVATE_WITH_EGRESS }),
             securityGroups: [this.securityGroup],
         })
