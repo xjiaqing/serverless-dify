@@ -9,15 +9,8 @@ export class DifySandboxTaskDefinitionStack extends NestedStack {
 
     public readonly definition: TaskDefinition
 
-    private readonly logGroup: LogGroup
-
     constructor(scope: Construct, id: string, props: DifySandboxTaskDefinitionStackProps) {
         super(scope, id, props);
-
-        this.logGroup = new LogGroup(this, 'DifySandboxLogGroup', {
-            retention: RetentionDays.ONE_WEEK, removalPolicy: RemovalPolicy.DESTROY,
-            logGroupName: '/ecs/serverless-dify/sandbox'
-        })
 
         const taskRole = new Role(this, 'ServerlessDifyClusterSandboxTaskRole', {
             assumedBy: new ServicePrincipal('ecs-tasks.amazonaws.com'),
@@ -35,10 +28,9 @@ export class DifySandboxTaskDefinitionStack extends NestedStack {
                 cpuArchitecture: CpuArchitecture.ARM64
             },
             cpu: '1024',
-            memoryMiB: '2048'
+            memoryMiB: '2048',
         })
 
-        this.definition.node.addDependency(this.logGroup)
         this.definition.addContainer('sandbox', {
             containerName: "sandbox",
             essential: true,
@@ -47,7 +39,15 @@ export class DifySandboxTaskDefinitionStack extends NestedStack {
                 { containerPort: 8194, hostPort: 8194, name: "serverless-dify-sandbox-8194-tcp", appProtocol: AppProtocol.http, protocol: Protocol.TCP }
             ],
             cpu: 1024,
-            logging: LogDriver.awsLogs({ streamPrefix: 'sandbox', logGroup: this.logGroup, mode: AwsLogDriverMode.NON_BLOCKING }),
+            logging: LogDriver.awsLogs({
+                streamPrefix: 'sandbox',
+                mode: AwsLogDriverMode.NON_BLOCKING,
+                logGroup: new LogGroup(this, 'DifySandboxLogGroup', {
+                    retention: RetentionDays.ONE_WEEK,
+                    removalPolicy: RemovalPolicy.DESTROY,
+                    logGroupName: '/ecs/serverless-dify/sandbox'
+                }),
+            }),
             environment: {
                 'GIN_MODE': 'release',
                 'WORKER_TIMEOUT': '15',

@@ -17,7 +17,7 @@ export class CeleryBrokerStack extends NestedStack {
 
         this.cluster = new elasticache.CfnServerlessCache(scope, 'CeleryBrokerCluster', {
             engine: 'redis',
-            serverlessCacheName: 'dify-celery-broker',
+            serverlessCacheName: 'serverless-dify-celery-broker',
             description: 'serverless redis cluster using for dify celery broker',
             securityGroupIds: [sg.securityGroupId],
             subnetIds: props.vpc.privateSubnets.map(subnet => subnet.subnetId)

@@ -1,64 +1,101 @@
-import { NestedStack, StackProps } from "aws-cdk-lib";
+import { aws_elasticache, NestedStack, StackProps } from "aws-cdk-lib";
 import { Peer, Port, SecurityGroup, SubnetType, Vpc } from "aws-cdk-lib/aws-ec2";
-import { Cluster, FargateService, TaskDefinition } from "aws-cdk-lib/aws-ecs";
+import { Cluster, FargateService } from "aws-cdk-lib/aws-ecs";
+import { Bucket } from "aws-cdk-lib/aws-s3";
+import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
-import { DifySandboxTaskDefinitionStack } from "./task-definitions/dify-sandbox";
+import { MetadataStoreStack } from "./metadata-store";
+import { DifyApiTaskDefinitionStack } from "./task-definitions/dify-api";
+import { DifyTaskDefinitionStackProps } from "./task-definitions/props";
+import { VectorStoreStack } from "./vector-store";
 
 
 export class DifyEcsClusterStack extends NestedStack {
 
     private readonly cluster: Cluster
 
-    private readonly clusterDefaultCloudMapNamespaceName = "serverless-dify-cloudmap-namespace"
+    private readonly apiSecretKey = new Secret(this, 'ServerlessDifyApiSecretKey', {
+        generateSecretString: { passwordLength: 32 }
+    })
 
-    private readonly sandboxTaskDefinition: TaskDefinition
+    private readonly sandboxCodeExecutionKey = new Secret(this, 'ServerlessDifySandboxCodeExecutionKey', {
+        generateSecretString: { passwordLength: 32 }
+    })
 
     private readonly securityGroup: SecurityGroup
 
-    constructor(scope: Construct, id: string, props: EcsClusterStackProps) {
+    constructor(scope: Construct, id: string, props: DifyEcsClusterStackProps) {
         super(scope, id, props);
 
         this.cluster = new Cluster(this, 'EcsClusterStack', { vpc: props.vpc, enableFargateCapacityProviders: true })
-        this.cluster.addDefaultCloudMapNamespace({
-            vpc: props.vpc,
-            name: this.clusterDefaultCloudMapNamespaceName,
-            useForServiceConnect: true
-        })
-
         this.securityGroup = new SecurityGroup(this, 'ServerlessDifyEcsTaskSG', { vpc: props.vpc, allowAllOutbound: true })
         this.securityGroup.addIngressRule(Peer.anyIpv4(), Port.allTraffic())
 
-        this.sandboxTaskDefinition = new DifySandboxTaskDefinitionStack(this, 'DifySandboxTaskDefinitionStack', {}).definition
-        this.sandboxTaskDefinition.node.addDependency(this.cluster)
-        this.sandboxTaskDefinition.node.addDependency(this.securityGroup)
+        const difyTaskDefinitionStackProps: DifyTaskDefinitionStackProps = {
+            network: props.vpc,
+            celeryBroker: {
+                hostname: props.celeryBroker.attrEndpointAddress,
+                port: props.celeryBroker.attrEndpointPort
+            },
 
-        this.runSandboxService()
+            redis: {
+                hostname: props.redis.attrEndpointAddress,
+                port: props.redis.attrEndpointPort,
+            },
+
+            metadataStore: {
+                hostname: props.metadataStore.cluster.clusterEndpoint.hostname,
+                port: props.metadataStore.cluster.clusterEndpoint.port,
+                defaultDatabase: MetadataStoreStack.DEFAULT_DATABASE,
+                secret: props.metadataStore.secret,
+            },
+
+            vectorStore: {
+                hostname: props.vectorStore.cluster.clusterEndpoint.hostname,
+                port: props.vectorStore.cluster.clusterEndpoint.port,
+                defaultDatabase: VectorStoreStack.DEFAULT_DATABASE,
+                secret: props.vectorStore.secret,
+            },
+
+            fileStore: props.storage,
+
+            apiSecretKey: this.apiSecretKey,
+            sandboxCodeExecutionKey: this.sandboxCodeExecutionKey,
+        }
+
+        this.runApiService(difyTaskDefinitionStackProps)
     }
 
-    runSandboxService() {
+    runApiService(props: DifyTaskDefinitionStackProps) {
+        const taskDefinition = new DifyApiTaskDefinitionStack(this, 'DifyApiTaskDefinitionStack', props)
+        taskDefinition.node.addDependency(this.cluster)
+        taskDefinition.node.addDependency(this.securityGroup)
 
-        const service = new FargateService(this, 'DifyEcsClusterSandboxService', {
+        const service = new FargateService(this, 'ServerlessDifyApiService', {
             cluster: this.cluster,
-            taskDefinition: this.sandboxTaskDefinition,
+            taskDefinition: taskDefinition.definition,
             desiredCount: 1,
-            serviceName: 'serverless-dify-sandbox',
+            serviceName: 'serverless-dify-api',
             vpcSubnets: this.cluster.vpc.selectSubnets({ subnetType: SubnetType.PRIVATE_WITH_EGRESS }),
             securityGroups: [this.securityGroup],
         })
 
-        service.enableServiceConnect({
-            namespace: this.clusterDefaultCloudMapNamespaceName,
-            services: [{
-                portMappingName: this.sandboxTaskDefinition.defaultContainer?.portMappings[0].name || "serverless-dify-sandbox-8194-tcp",
-                dnsName: "serverles-dify-sandbox",
-                discoveryName: "serverless-dify-sandbox",
-            }]
-        })
+        return service
     }
 }
 
-export interface EcsClusterStackProps extends StackProps {
+export interface DifyEcsClusterStackProps extends StackProps {
 
     readonly vpc: Vpc;
+
+    readonly celeryBroker: aws_elasticache.CfnServerlessCache;
+
+    readonly redis: aws_elasticache.CfnServerlessCache;
+
+    readonly metadataStore: MetadataStoreStack;
+
+    readonly vectorStore: VectorStoreStack;
+
+    readonly storage: Bucket
 
 }
