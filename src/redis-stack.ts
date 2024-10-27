@@ -18,7 +18,7 @@ export class RedisStack extends NestedStack {
 
         this.cluster = new elasticache.CfnServerlessCache(scope, 'RedisServerlessCache', {
             engine: 'redis',
-            serverlessCacheName: 'dify-svl-redis',
+            serverlessCacheName: 'serverless-dify-redis',
             description: 'serverless redis cluster using for dify redis',
             securityGroupIds: [sg.securityGroupId],
             subnetIds: props.vpc.privateSubnets.map(subnet => subnet.subnetId)

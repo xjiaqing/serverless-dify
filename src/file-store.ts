@@ -2,7 +2,7 @@ import { NestedStack, StackProps } from "aws-cdk-lib";
 import { Bucket } from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
 
-export class StorageStack extends NestedStack {
+export class FileStoreStack extends NestedStack {
 
     public readonly bucket: Bucket;
 

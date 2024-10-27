@@ -1,7 +1,8 @@
 import { NestedStack, RemovalPolicy, StackProps } from "aws-cdk-lib";
 import { Peer, Port, SecurityGroup, SubnetType, Vpc } from "aws-cdk-lib/aws-ec2";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
-import { AuroraPostgresEngineVersion, ClusterInstance, DatabaseCluster, DatabaseClusterEngine, SubnetGroup } from "aws-cdk-lib/aws-rds";
+import { AuroraPostgresEngineVersion, ClusterInstance, Credentials, DatabaseCluster, DatabaseClusterEngine, SubnetGroup } from "aws-cdk-lib/aws-rds";
+import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { AwsCustomResource, AwsCustomResourcePolicy, PhysicalResourceId } from "aws-cdk-lib/custom-resources";
 import { Construct } from "constructs";
 
@@ -11,9 +12,11 @@ export class VectorStoreStack extends NestedStack {
 
     private readonly port: number = 5432
 
-    private readonly defaultDatabaseName: string = 'dify'
+    static readonly DEFAULT_DATABASE: string = 'dify'
 
     public readonly cluster: DatabaseCluster
+
+    public readonly secret: Secret
 
     constructor(scope: Construct, id: string, props: VectorStoreStackProps) {
         super(scope, id, props)
@@ -27,6 +30,15 @@ export class VectorStoreStack extends NestedStack {
             removalPolicy: RemovalPolicy.DESTROY,
             vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
         });
+
+        this.secret = new Secret(scope, 'VectorStoreDatabaseSecret', {
+            description: "serverless-dify vector store secret.",
+            generateSecretString: {
+                secretStringTemplate: JSON.stringify({ username: 'postgre' }),
+                generateStringKey: 'password',
+                excludePunctuation: true
+            }
+        })
 
 
         this.cluster = new DatabaseCluster(scope, 'VectorStoreInstanceCluster', {
@@ -42,7 +54,8 @@ export class VectorStoreStack extends NestedStack {
             serverlessV2MaxCapacity: 2,
             iamAuthentication: true,
             enableDataApi: true,
-            defaultDatabaseName: this.defaultDatabaseName
+            credentials: Credentials.fromSecret(this.secret),
+            defaultDatabaseName: VectorStoreStack.DEFAULT_DATABASE
         })
 
         const query = this.enablePgvector()
@@ -61,7 +74,7 @@ export class VectorStoreStack extends NestedStack {
                 parameters: {
                     resourceArn: cluster.clusterArn,
                     secretArn: cluster.secret?.secretArn,
-                    database: this.defaultDatabaseName,
+                    database: VectorStoreStack.DEFAULT_DATABASE,
                     sql: 'CREATE EXTENSION IF NOT EXISTS vector;'
                 },
                 physicalResourceId: PhysicalResourceId.of(cluster.clusterArn)
