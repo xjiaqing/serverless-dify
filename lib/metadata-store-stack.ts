@@ -1,52 +1,56 @@
-import { NestedStack, RemovalPolicy, StackProps } from "aws-cdk-lib";
-import { Peer, Port, SecurityGroup, SubnetType, Vpc } from "aws-cdk-lib/aws-ec2";
+import { RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { SecurityGroup, SubnetType, Vpc } from "aws-cdk-lib/aws-ec2";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AuroraPostgresEngineVersion, ClusterInstance, Credentials, DatabaseCluster, DatabaseClusterEngine, SubnetGroup } from "aws-cdk-lib/aws-rds";
 import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
+import { DifyMetadataStoreProps } from "./task-definitions/props";
 
-export class MetadataStoreStack extends NestedStack {
 
-    private readonly port: number = 5432
+export interface MetadataStoreStackProps extends StackProps {
 
-    static readonly DEFAULT_DATABASE: string = 'dify'
+    vpc: Vpc
+
+    sg: SecurityGroup
+
+}
+
+
+export class MetadataStoreStack extends Stack {
 
     public readonly cluster: DatabaseCluster
 
     public readonly secret: Secret
 
+    static readonly PORT: number = 5432
+
+    static readonly DEFAULT_DATABASE: string = "dify"
+
     constructor(scope: Construct, id: string, props: MetadataStoreStackProps) {
-        super(scope, id, props);
+        super(scope, id, props)
 
-        // security group for dify metadata postgresql
-        const sg = new SecurityGroup(scope, "MetadataStoreSecurityGroup", {
-            vpc: props.vpc, allowAllOutbound: true
-        });
-        sg.addIngressRule(Peer.anyIpv4(), Port.tcp(this.port))
-
-        // subnet group 
-        const subnetGroup = new SubnetGroup(scope, 'MetadataStoreSubnetGroup', {
-            description: 'DifyMetadataStore',
+        const subnetGroup = new SubnetGroup(this, "MetadataStoreSubnetGroup", {
+            description: 'Used for serverless-dify metadata store',
             vpc: props.vpc,
             removalPolicy: RemovalPolicy.DESTROY,
             vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
         });
 
-        this.secret = new Secret(scope, 'MetadataStoreDatabaseSecret', {
-            description: "serverless-dify metadata store secret.",
+        this.secret = new Secret(this, "MetadataStoreDatabaseSecret", {
+            description: "Used for serverless-dify metadata store",
             generateSecretString: {
-                secretStringTemplate: JSON.stringify({ username: 'postgre' }),
-                generateStringKey: 'password',
+                secretStringTemplate: JSON.stringify({ username: "postgre" }),
+                generateStringKey: "password",
                 excludePunctuation: true
             }
         })
 
-        this.cluster = new DatabaseCluster(scope, 'MetadataStoreDatabaseCluster', {
+        this.cluster = new DatabaseCluster(this, 'MetadataStoreDatabaseCluster', {
             vpc: props.vpc,
-            securityGroups: [sg],
-            port: this.port,
+            securityGroups: [props.sg],
+            port: MetadataStoreStack.PORT,
             subnetGroup: subnetGroup,
-            clusterIdentifier: 'MetadataStore',
+            clusterIdentifier: 'serverless-dify-metadata-store',
             engine: DatabaseClusterEngine.auroraPostgres({ version: AuroraPostgresEngineVersion.VER_15_4 }),
             writer: ClusterInstance.serverlessV2('MetadataStoreServerlessWriteInstance'),
             cloudwatchLogsRetention: RetentionDays.ONE_WEEK,
@@ -60,13 +64,15 @@ export class MetadataStoreStack extends NestedStack {
 
         this.cluster.applyRemovalPolicy(RemovalPolicy.DESTROY)
     }
-}
 
 
-export interface MetadataStoreStackProps extends StackProps {
+    public exportProps(): DifyMetadataStoreProps {
+        return {
+            hostname: this.cluster.clusterEndpoint.hostname,
+            port: MetadataStoreStack.PORT,
+            defaultDatabase: MetadataStoreStack.DEFAULT_DATABASE,
+            secret: this.secret
+        }
+    }
 
-    /**
-     * vpc configure
-     */
-    readonly vpc: Vpc;
 }

@@ -79,7 +79,7 @@ export class DifyWorkerTaskDefinitionStack extends NestedStack {
 
                 "STORAGE_TYPE": "s3",
                 "S3_REGION": this.region,
-                "S3_BUCKET_NAME": props.fileStore.bucketName,
+                "S3_BUCKET_NAME": props.fileStore.bucket.bucketName,
                 "S3_USE_AWS_MANAGED_IAM": "true",
 
             },

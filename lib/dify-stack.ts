@@ -1,0 +1,92 @@
+import { Stack, StackProps } from "aws-cdk-lib";
+import { SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
+import { Cluster, FargateService } from "aws-cdk-lib/aws-ecs";
+import { Secret } from "aws-cdk-lib/aws-secretsmanager";
+import { Construct } from "constructs";
+import { DifyApiTaskDefinitionStack } from "./task-definitions/dify-api";
+import { DifyWebTaskDefinitionStack } from "./task-definitions/dify-web";
+import { DifyWorkerTaskDefinitionStack } from "./task-definitions/dify-worker";
+import { DifyCeleryBrokerProps, DifyFileStoreProps, DifyMetadataStoreProps, DifyNetworkProps, DifyRedisProps, DifyTaskDefinitionStackProps, DifyVectorStorePgProps } from "./task-definitions/props";
+
+export interface DifyStackProps extends StackProps {
+
+    readonly fileStore: DifyFileStoreProps
+
+    readonly network: DifyNetworkProps
+
+    readonly celeryBroker: DifyCeleryBrokerProps
+
+    readonly redis: DifyRedisProps
+
+    readonly metadataStore: DifyMetadataStoreProps
+
+    readonly vectorStore: DifyVectorStorePgProps
+}
+
+export class DifyStack extends Stack {
+
+    private readonly cluster: Cluster
+
+    private readonly taskSecurityGroup: SecurityGroup
+
+    constructor(scope: Construct, id: string, props: DifyStackProps) {
+        super(scope, id, props)
+
+        this.cluster = new Cluster(this, "ServerlessDifyEcsCluster", { vpc: props.network.vpc, enableFargateCapacityProviders: true })
+        this.taskSecurityGroup = props.network.taskSecurityGroup
+
+        const difyTaskDefinitionStackProps: DifyTaskDefinitionStackProps = {
+            network: props.network, fileStore: props.fileStore, celeryBroker: props.celeryBroker, redis: props.redis,
+            metadataStore: props.metadataStore, vectorStore: props.vectorStore,
+            apiSecretKey: new Secret(this, 'ServerlessDifyApiSecretKey', { generateSecretString: { passwordLength: 32 } }),
+            sandboxCodeExecutionKey: new Secret(this, 'ServerlessDifySandboxCodeExecutionKey', { generateSecretString: { passwordLength: 32 } }),
+        }
+
+        this.runApiService(difyTaskDefinitionStackProps)
+        this.runWorkService(difyTaskDefinitionStackProps)
+        this.runWebService(difyTaskDefinitionStackProps)
+    }
+
+
+    runApiService(props: DifyTaskDefinitionStackProps) {
+        const taskDefinition = new DifyApiTaskDefinitionStack(this, 'DifyApiTaskDefinitionStack', props)
+        const service = new FargateService(this, 'ServerlessDifyApiService', {
+            cluster: this.cluster,
+            taskDefinition: taskDefinition.definition,
+            desiredCount: 1,
+            serviceName: 'serverless-dify-api',
+            vpcSubnets: this.cluster.vpc.selectSubnets({ subnetType: SubnetType.PRIVATE_WITH_EGRESS }),
+            securityGroups: [this.taskSecurityGroup],
+        })
+
+        return service
+    }
+
+    runWorkService(props: DifyTaskDefinitionStackProps) {
+        const taskDefinition = new DifyWorkerTaskDefinitionStack(this, 'DifyWorkerTaskDefinitionStack', props)
+        const service = new FargateService(this, 'ServerlessDifyWorkerService', {
+            cluster: this.cluster,
+            taskDefinition: taskDefinition.definition,
+            desiredCount: 1,
+            serviceName: 'serverless-dify-worker',
+            vpcSubnets: this.cluster.vpc.selectSubnets({ subnetType: SubnetType.PRIVATE_WITH_EGRESS }),
+            securityGroups: [this.taskSecurityGroup],
+        })
+
+        return service
+    }
+
+    runWebService(props: DifyTaskDefinitionStackProps) {
+        const taskDefinition = new DifyWebTaskDefinitionStack(this, 'DifyWebServiceTaskDefinitionStack', props)
+        const service = new FargateService(this, 'ServerlessDifyWebService', {
+            cluster: this.cluster,
+            taskDefinition: taskDefinition.definition,
+            desiredCount: 1,
+            serviceName: 'serverless-dify-web',
+            vpcSubnets: this.cluster.vpc.selectSubnets({ subnetType: SubnetType.PRIVATE_WITH_EGRESS }),
+            securityGroups: [this.taskSecurityGroup],
+        })
+
+        return service
+    }
+}
