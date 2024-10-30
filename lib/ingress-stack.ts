@@ -1,6 +1,6 @@
 import { Stack, StackProps } from "aws-cdk-lib";
 import { SecurityGroup, SubnetType, Vpc } from "aws-cdk-lib/aws-ec2";
-import { ApplicationListener, ApplicationLoadBalancer, ApplicationProtocol, ListenerAction } from "aws-cdk-lib/aws-elasticloadbalancingv2";
+import { ApplicationListener, ApplicationLoadBalancer, ApplicationProtocol } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { Construct } from "constructs";
 import { DifyIngressProps } from "./task-definitions/props";
 
@@ -24,13 +24,13 @@ export class IngressStack extends Stack {
         this.alb = new ApplicationLoadBalancer(this, "IngressStack", {
             vpc: props.vpc,
             securityGroup: props.sg,
+            internetFacing: true,
             vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS }
         })
 
         this.listener = this.alb.addListener("IngressListener80", {
             port: 80,
             protocol: ApplicationProtocol.HTTP,
-            defaultAction: ListenerAction.fixedResponse(200, { contentType: 'text/plain', messageBody: 'OK' })
         })
     }
 
@@ -38,7 +38,7 @@ export class IngressStack extends Stack {
 
         return {
             lb: this.alb,
-            listener: this.listener
+            listener: this.listener,
         }
 
     }

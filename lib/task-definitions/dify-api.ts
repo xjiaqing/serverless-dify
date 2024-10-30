@@ -7,7 +7,11 @@ import { DifyTaskDefinitionStackProps } from "./props";
 
 export class DifyApiTaskDefinitionStack extends NestedStack {
 
-    public readonly definition: TaskDefinition;
+    static readonly DIFY_API_PORT = 5001
+
+    static readonly HEALTHY_ENDPOINT = "/health"
+
+    public readonly definition: TaskDefinition
 
     constructor(scope: Construct, id: string, props: DifyTaskDefinitionStackProps) {
         super(scope, id, props);
@@ -31,40 +35,19 @@ export class DifyApiTaskDefinitionStack extends NestedStack {
             memoryMiB: '2048',
         })
 
-        this.definition.addContainer('sandbox', {
-            containerName: "sandbox",
-            image: ContainerImage.fromRegistry("langgenius/dify-sandbox:0.2.9"),
-            portMappings: [
-                { containerPort: 8194, hostPort: 8194, name: "serverless-dify-sandbox-8194-tcp", appProtocol: AppProtocol.http, protocol: Protocol.TCP }
-            ],
-            cpu: 512,
-            memoryLimitMiB: 1024,
-            logging: LogDriver.awsLogs({
-                streamPrefix: 'sandbox',
-                mode: AwsLogDriverMode.NON_BLOCKING,
-                logGroup: new LogGroup(this, 'DifySandboxLogGroup', {
-                    retention: RetentionDays.ONE_WEEK,
-                    removalPolicy: RemovalPolicy.DESTROY,
-                    logGroupName: '/ecs/serverless-dify/sandbox'
-                }),
-            }),
-            environment: {
-                'GIN_MODE': 'release',
-                'WORKER_TIMEOUT': '15',
-            },
-            secrets: {
-                "API_KEY": Secret.fromSecretsManager(props.sandboxCodeExecutionKey)
-            }
-        })
-
         this.definition.addContainer('api', {
-            containerName: "api",
+            containerName: "main",
             essential: true,
             image: ContainerImage.fromRegistry("langgenius/dify-api:0.8.3"),
             cpu: 512,
             memoryLimitMiB: 1024,
             portMappings: [
-                { containerPort: 5001, hostPort: 5001, name: "serverless-dify-api-5001-tcp", appProtocol: AppProtocol.http, protocol: Protocol.TCP }
+                {
+                    containerPort: DifyApiTaskDefinitionStack.DIFY_API_PORT,
+                    hostPort: DifyApiTaskDefinitionStack.DIFY_API_PORT,
+                    name: "serverless-dify-api-5001-tcp",
+                    appProtocol: AppProtocol.http, protocol: Protocol.TCP
+                }
             ],
             logging: LogDriver.awsLogs({
                 streamPrefix: 'api',
@@ -134,5 +117,30 @@ export class DifyApiTaskDefinitionStack extends NestedStack {
 
         })
 
+        this.definition.addContainer('sandbox', {
+            containerName: "sandbox",
+            image: ContainerImage.fromRegistry("langgenius/dify-sandbox:0.2.9"),
+            portMappings: [
+                { containerPort: 8194, hostPort: 8194, name: "serverless-dify-sandbox-8194-tcp", appProtocol: AppProtocol.http, protocol: Protocol.TCP }
+            ],
+            cpu: 512,
+            memoryLimitMiB: 1024,
+            logging: LogDriver.awsLogs({
+                streamPrefix: 'sandbox',
+                mode: AwsLogDriverMode.NON_BLOCKING,
+                logGroup: new LogGroup(this, 'DifySandboxLogGroup', {
+                    retention: RetentionDays.ONE_WEEK,
+                    removalPolicy: RemovalPolicy.DESTROY,
+                    logGroupName: '/ecs/serverless-dify/sandbox'
+                }),
+            }),
+            environment: {
+                'GIN_MODE': 'release',
+                'WORKER_TIMEOUT': '15',
+            },
+            secrets: {
+                "API_KEY": Secret.fromSecretsManager(props.sandboxCodeExecutionKey)
+            }
+        })
     }
 }

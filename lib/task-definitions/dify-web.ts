@@ -7,10 +7,14 @@ import { DifyTaskDefinitionStackProps } from "./props";
 
 export class DifyWebTaskDefinitionStack extends NestedStack {
 
-    public readonly definition: TaskDefinition;
+    public readonly definition: TaskDefinition
+
+    static readonly DIFY_WEB_PORT: number = 3000
+
+    static readonly HEALTHY_ENDPOINT = "/apps"
 
     constructor(scope: Construct, id: string, props: DifyTaskDefinitionStackProps) {
-        super(scope, id, props);
+        super(scope, id, props)
 
         const taskRole = new Role(this, 'ServerlessDifyClusterWebTaskRole', {
             assumedBy: new ServicePrincipal('ecs-tasks.amazonaws.com'),
@@ -32,12 +36,17 @@ export class DifyWebTaskDefinitionStack extends NestedStack {
         })
 
         this.definition.addContainer('web', {
-            containerName: "web",
+            containerName: "main",
             essential: true,
             image: ContainerImage.fromRegistry("langgenius/dify-web"),
             cpu: 512,
             memoryLimitMiB: 1024,
-            portMappings: [{ name: "serverless-dify-web-3000-tcp", containerPort: 3000, hostPort: 3000, protocol: Protocol.TCP, appProtocol: AppProtocol.http }],
+            portMappings: [{
+                name: "serverless-dify-web-3000-tcp",
+                containerPort: DifyWebTaskDefinitionStack.DIFY_WEB_PORT,
+                hostPort: DifyWebTaskDefinitionStack.DIFY_WEB_PORT,
+                protocol: Protocol.TCP, appProtocol: AppProtocol.http
+            }],
             logging: LogDriver.awsLogs({
                 streamPrefix: 'web',
                 mode: AwsLogDriverMode.NON_BLOCKING,

@@ -67,7 +67,3 @@ dify.addDependency(metadataStore)
 dify.addDependency(vectorStore)
 dify.addDependency(redis)
 dify.addDependency(celeryBroker)
-
-// create ecs service 
-
-// create ingress
