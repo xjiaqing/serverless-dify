@@ -1,5 +1,6 @@
 import { StackProps } from "aws-cdk-lib";
 import { SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2";
+import { ApplicationListener, ApplicationLoadBalancer } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { Bucket } from "aws-cdk-lib/aws-s3";
 import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 
@@ -15,9 +16,11 @@ export interface DifyRedisProps { hostname: string, port: string }
 
 export interface DifyCeleryBrokerProps { hostname: string, port: string }
 
+export interface DifyIngressProps { lb: ApplicationLoadBalancer, listener: ApplicationListener }
+
 export interface DifyTaskDefinitionStackProps extends StackProps {
 
-    network: DifyNetworkProps;
+    network: DifyNetworkProps
 
     celeryBroker: DifyCeleryBrokerProps
 

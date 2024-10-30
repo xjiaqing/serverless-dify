@@ -6,13 +6,15 @@ import { Construct } from "constructs";
 import { DifyApiTaskDefinitionStack } from "./task-definitions/dify-api";
 import { DifyWebTaskDefinitionStack } from "./task-definitions/dify-web";
 import { DifyWorkerTaskDefinitionStack } from "./task-definitions/dify-worker";
-import { DifyCeleryBrokerProps, DifyFileStoreProps, DifyMetadataStoreProps, DifyNetworkProps, DifyRedisProps, DifyTaskDefinitionStackProps, DifyVectorStorePgProps } from "./task-definitions/props";
+import { DifyCeleryBrokerProps, DifyFileStoreProps, DifyIngressProps, DifyMetadataStoreProps, DifyNetworkProps, DifyRedisProps, DifyTaskDefinitionStackProps, DifyVectorStorePgProps } from "./task-definitions/props";
 
 export interface DifyStackProps extends StackProps {
 
     readonly fileStore: DifyFileStoreProps
 
     readonly network: DifyNetworkProps
+
+    readonly ingress: DifyIngressProps
 
     readonly celeryBroker: DifyCeleryBrokerProps
 
@@ -36,7 +38,8 @@ export class DifyStack extends Stack {
         this.taskSecurityGroup = props.network.taskSecurityGroup
 
         const difyTaskDefinitionStackProps: DifyTaskDefinitionStackProps = {
-            network: props.network, fileStore: props.fileStore, celeryBroker: props.celeryBroker, redis: props.redis,
+            network: props.network, fileStore: props.fileStore,
+            celeryBroker: props.celeryBroker, redis: props.redis,
             metadataStore: props.metadataStore, vectorStore: props.vectorStore,
             apiSecretKey: new Secret(this, 'ServerlessDifyApiSecretKey', { generateSecretString: { passwordLength: 32 } }),
             sandboxCodeExecutionKey: new Secret(this, 'ServerlessDifySandboxCodeExecutionKey', { generateSecretString: { passwordLength: 32 } }),

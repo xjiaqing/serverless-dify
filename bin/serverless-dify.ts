@@ -4,6 +4,7 @@ import 'source-map-support/register';
 import { CeleryBrokerStack } from '../lib/celery-broker-stack';
 import { DifyStack } from '../lib/dify-stack';
 import { FileStoreStack } from '../lib/file-store-stack';
+import { IngressStack } from '../lib/ingress-stack';
 import { MetadataStoreStack } from '../lib/metadata-store-stack';
 import { NetworkStack } from '../lib/network-stack';
 import { RedisStack } from '../lib/redis-stack';
@@ -26,8 +27,6 @@ const app = new cdk.App();
 
 //   /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
 
-
-
 // });
 
 
@@ -35,6 +34,9 @@ const app = new cdk.App();
 const network = new NetworkStack(app, "ServerlessDifyNetworkStack", {})
 
 const fileStore = new FileStoreStack(app, "ServerlessDifyFileStoreStack", {})
+
+const ingress = new IngressStack(app, "ServerlessDifyIngressStack", { vpc: network.vpc, sg: network.ingressSg })
+ingress.addDependency(network)
 
 const metadataStore = new MetadataStoreStack(app, "ServerlessDifyMetadataStoreStack", { vpc: network.vpc, sg: network.metadataStoreSg })
 metadataStore.addDependency(network)
@@ -48,10 +50,10 @@ redis.addDependency(network)
 const celeryBroker = new CeleryBrokerStack(app, "ServerlessDifyCeleryBrokerStack", { vpc: network.vpc, sg: network.celeryBrokerSg })
 celeryBroker.addDependency(network)
 
-
 const dify = new DifyStack(app, "ServerlessDifyStack", {
     network: network.exportProps(),
     fileStore: fileStore.exportProps(),
+    ingress: ingress.exportProps(),
     metadataStore: metadataStore.exportProps(),
     vectorStore: vectorStore.exportProps(),
     redis: redis.exportProps(),
@@ -60,6 +62,7 @@ const dify = new DifyStack(app, "ServerlessDifyStack", {
 
 dify.addDependency(network)
 dify.addDependency(fileStore)
+dify.addDependency(ingress)
 dify.addDependency(metadataStore)
 dify.addDependency(vectorStore)
 dify.addDependency(redis)

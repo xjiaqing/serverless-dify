@@ -9,6 +9,8 @@ export class NetworkStack extends Stack {
 
     public readonly vpc: Vpc;
 
+    public readonly ingressSg: SecurityGroup;
+
     public readonly difyServiceSg: SecurityGroup;
 
     public readonly metadataStoreSg: SecurityGroup;
@@ -33,8 +35,13 @@ export class NetworkStack extends Stack {
             gatewayEndpoints: { S3: { service: GatewayVpcEndpointAwsService.S3 } }
         });
 
+        this.ingressSg = new SecurityGroup(this, 'IngressSg', { vpc: this.vpc, allowAllOutbound: true })
+        this.ingressSg.connections.allowFromAnyIpv4(Port.HTTP)
+        this.ingressSg.connections.allowFromAnyIpv4(Port.HTTPS)
+
         this.difyServiceSg = new SecurityGroup(this, 'DifyServiceSg', { vpc: this.vpc, allowAllOutbound: true })
         this.difyServiceSg.connections.allowInternally(Port.allTraffic())
+        this.difyServiceSg.connections.allowFrom(this.ingressSg, Port.allTcp())
 
         this.metadataStoreSg = new SecurityGroup(this, 'MetadataStoreSg', { vpc: this.vpc, allowAllOutbound: true });
         this.metadataStoreSg.connections.allowInternally(Port.allTraffic())
