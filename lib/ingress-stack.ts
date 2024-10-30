@@ -25,7 +25,7 @@ export class IngressStack extends Stack {
             vpc: props.vpc,
             securityGroup: props.sg,
             internetFacing: true,
-            vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS }
+            vpcSubnets: { subnetType: SubnetType.PUBLIC }
         })
 
         this.listener = this.alb.addListener("IngressListener80", {
