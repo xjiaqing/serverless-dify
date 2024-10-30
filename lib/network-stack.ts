@@ -38,6 +38,7 @@ export class NetworkStack extends Stack {
         this.ingressSg = new SecurityGroup(this, 'IngressSg', { vpc: this.vpc, allowAllOutbound: true })
         this.ingressSg.connections.allowFromAnyIpv4(Port.HTTP)
         this.ingressSg.connections.allowFromAnyIpv4(Port.HTTPS)
+        this.ingressSg.connections.allowFromAnyIpv4(Port.allIcmp())
 
         this.difyServiceSg = new SecurityGroup(this, 'DifyServiceSg', { vpc: this.vpc, allowAllOutbound: true })
         this.difyServiceSg.connections.allowInternally(Port.allTraffic())
