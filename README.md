@@ -6,5 +6,5 @@ Deploy a dify cluster using Amazon serverless stack.
 ### Deploy 
 
 ```
-cdk deploy --all --concurrency 5 --require-approval never
+cdk deploy --region <region-code> --all --concurrency 5 --require-approval never
 ```
