@@ -38,7 +38,7 @@ export class DifyApiTaskDefinitionStack extends NestedStack {
         this.definition.addContainer('api', {
             containerName: "main",
             essential: true,
-            image: ContainerImage.fromRegistry("langgenius/dify-api:0.8.3"),
+            image: ContainerImage.fromRegistry("langgenius/dify-api"),
             cpu: 512,
             memoryLimitMiB: 1024,
             portMappings: [
@@ -104,6 +104,14 @@ export class DifyApiTaskDefinitionStack extends NestedStack {
                 "S3_USE_AWS_MANAGED_IAM": "true",
 
                 "TEMPLATE_TRANSFORM_MAX_LENGTH": "80000",
+
+                "MAIL_TYPE": "smtp",
+                "SMTP_SERVER": props.stmp.host,
+                "SMTP_PORT": props.stmp.port.toString(),
+                "SMTP_USERNAME": props.stmp.username,
+                "SMTP_PASSWORD": props.stmp.password,
+                "SMTP_USE_TLS": props.stmp.tls ? "true" : "false",
+                "MAIL_FROM_ADDRESS": props.stmp.fromEmail,
             },
 
             secrets: {
@@ -119,7 +127,7 @@ export class DifyApiTaskDefinitionStack extends NestedStack {
 
         this.definition.addContainer('sandbox', {
             containerName: "sandbox",
-            image: ContainerImage.fromRegistry("langgenius/dify-sandbox:0.2.9"),
+            image: ContainerImage.fromRegistry("langgenius/dify-sandbox"),
             portMappings: [
                 { containerPort: 8194, hostPort: 8194, name: "serverless-dify-sandbox-8194-tcp", appProtocol: AppProtocol.http, protocol: Protocol.TCP }
             ],
@@ -137,6 +145,14 @@ export class DifyApiTaskDefinitionStack extends NestedStack {
             environment: {
                 'GIN_MODE': 'release',
                 'WORKER_TIMEOUT': '15',
+
+                "MAIL_TYPE": "smtp",
+                "SMTP_SERVER": props.stmp.host,
+                "SMTP_PORT": props.stmp.port.toString(),
+                "SMTP_USERNAME": props.stmp.username,
+                "SMTP_PASSWORD": props.stmp.password,
+                "SMTP_USE_TLS": props.stmp.tls ? "true" : "false",
+                "MAIL_FROM_ADDRESS": props.stmp.fromEmail,
             },
             secrets: {
                 "API_KEY": Secret.fromSecretsManager(props.sandboxCodeExecutionKey)

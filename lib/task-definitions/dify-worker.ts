@@ -34,7 +34,7 @@ export class DifyWorkerTaskDefinitionStack extends NestedStack {
         this.definition.addContainer('worker', {
             containerName: "worker",
             essential: true,
-            image: ContainerImage.fromRegistry('langgenius/dify-api:0.8.3'),
+            image: ContainerImage.fromRegistry('langgenius/dify-api'),
             command: ['worker'],
             cpu: 512,
             memoryLimitMiB: 1024,
@@ -81,6 +81,14 @@ export class DifyWorkerTaskDefinitionStack extends NestedStack {
                 "S3_REGION": this.region,
                 "S3_BUCKET_NAME": props.fileStore.bucket.bucketName,
                 "S3_USE_AWS_MANAGED_IAM": "true",
+
+                "MAIL_TYPE": "smtp",
+                "SMTP_SERVER": props.stmp.host,
+                "SMTP_PORT": props.stmp.port.toString(),
+                "SMTP_USERNAME": props.stmp.username,
+                "SMTP_PASSWORD": props.stmp.password,
+                "SMTP_USE_TLS": props.stmp.tls ? "true" : "false",
+                "MAIL_FROM_ADDRESS": props.stmp.fromEmail,
 
             },
             secrets: {

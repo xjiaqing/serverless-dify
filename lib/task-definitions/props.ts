@@ -18,6 +18,8 @@ export interface DifyCeleryBrokerProps { hostname: string, port: string }
 
 export interface DifyIngressProps { lb: ApplicationLoadBalancer, listener: ApplicationListener }
 
+export interface SmtpServerProps { host: string, port: number, username: string, password: string, tls: boolean, fromEmail: string }
+
 export interface DifyTaskDefinitionStackProps extends StackProps {
 
     network: DifyNetworkProps
@@ -30,10 +32,12 @@ export interface DifyTaskDefinitionStackProps extends StackProps {
 
     vectorStore: DifyVectorStorePgProps
 
-    fileStore: DifyFileStoreProps;
+    fileStore: DifyFileStoreProps
 
-    apiSecretKey: Secret;
+    apiSecretKey: Secret
 
-    sandboxCodeExecutionKey: Secret;
+    sandboxCodeExecutionKey: Secret
+
+    stmp: SmtpServerProps
 
 }
