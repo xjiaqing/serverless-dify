@@ -1,6 +1,6 @@
 import { NestedStack, RemovalPolicy } from "aws-cdk-lib";
 import { AppProtocol, AwsLogDriverMode, Compatibility, ContainerImage, CpuArchitecture, LogDriver, NetworkMode, OperatingSystemFamily, Protocol, Secret, TaskDefinition } from "aws-cdk-lib/aws-ecs";
-import { Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import { Construct } from "constructs";
 import { DifyTaskDefinitionStackProps } from "./props";
@@ -18,13 +18,17 @@ export class DifyApiTaskDefinitionStack extends NestedStack {
 
         const taskRole = new Role(this, 'ServerlessDifyClusterApiTaskRole', {
             assumedBy: new ServicePrincipal('ecs-tasks.amazonaws.com'),
-            managedPolicies: [{ managedPolicyArn: 'arn:aws:iam::aws:policy/AdministratorAccess' }]
         })
+        taskRole.addToPrincipalPolicy(new PolicyStatement({
+            actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
+            resources: ['*']
+        }))
+
+        props.fileStore.bucket.grantReadWrite(taskRole)
 
         this.definition = new TaskDefinition(this, 'DifyApiTaskDefinitionStack', {
             family: "serverless-dify-api",
             taskRole: taskRole,
-            executionRole: taskRole,
             compatibility: Compatibility.EC2_AND_FARGATE,
             networkMode: NetworkMode.AWS_VPC,
             runtimePlatform: {
